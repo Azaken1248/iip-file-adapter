@@ -2,8 +2,10 @@ package com.iip.fileadapter;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class FileAdapterApplication {
 
 	public static void main(String[] args) {

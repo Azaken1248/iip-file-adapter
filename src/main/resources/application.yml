@@ -26,3 +26,7 @@ iip:
   file:
     output-path: ${FILE_OUTPUT_PATH:./data/interns.csv}
     dedup-store-path: ${DEDUP_STORE_PATH:./data/file-adapter-dedup}
+  retry:
+    max-attempts: ${RETRY_MAX_ATTEMPTS:3}
+    initial-backoff-ms: ${RETRY_INITIAL_BACKOFF_MS:200}
+    multiplier: ${RETRY_MULTIPLIER:2.0}
