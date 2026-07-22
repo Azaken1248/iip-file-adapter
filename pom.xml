@@ -66,6 +66,13 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<!-- TestRestTemplate isn't auto-registered by RANDOM_PORT alone in
+			     Spring Boot 4 anymore; needs this + @AutoConfigureTestRestTemplate. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-testcontainers</artifactId>
 			<scope>test</scope>

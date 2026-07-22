@@ -27,6 +27,8 @@ management:
       show-details: always
 
 iip:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   topics:
     intern-created: intern.created
     intern-dlq: intern.dlq

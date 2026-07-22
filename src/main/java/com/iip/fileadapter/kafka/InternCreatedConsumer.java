@@ -40,7 +40,11 @@ public class InternCreatedConsumer {
 		this.dlqPublisher = dlqPublisher;
 	}
 
-	@KafkaListener(topics = "${iip.topics.intern-created}")
+	// The explicit id is what AdminController looks up via
+	// KafkaListenerEndpointRegistry to pause/resume this specific listener.
+	public static final String LISTENER_ID = "internCreatedListener";
+
+	@KafkaListener(id = LISTENER_ID, topics = "${iip.topics.intern-created}")
 	public void onInternCreated(ConsumerRecord<String, String> record) {
 		AtomicInteger attempts = new AtomicInteger(0);
 		try {
