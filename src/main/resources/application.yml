@@ -6,6 +6,13 @@ spring:
     consumer:
       group-id: file-adapter
       auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # DLQ envelopes are built and JSON-serialized by hand (DlqPublisher),
+      # not via a JSON-aware Kafka serializer.
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 server:
   port: ${SERVER_PORT:8082}
