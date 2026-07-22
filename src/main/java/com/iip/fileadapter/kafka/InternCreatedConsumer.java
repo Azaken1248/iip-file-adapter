@@ -42,9 +42,22 @@ public class InternCreatedConsumer {
 
 	// The explicit id is what AdminController looks up via
 	// KafkaListenerEndpointRegistry to pause/resume this specific listener.
+	// groupId is set explicitly and separately: @KafkaListener's id doubles
+	// as the Kafka consumer group id by default (idIsGroup), and this id
+	// string isn't unique across services -- db-adapter uses the exact
+	// same LISTENER_ID for its own listener. Without an explicit groupId
+	// here, both adapters would silently join the *same* Kafka consumer
+	// group and split intern.created's partitions between them instead of
+	// each independently seeing every message, breaking the fan-out
+	// guarantee (caught via a real docker-compose run, not the test suite,
+	// since each adapter's Testcontainers tests use an isolated Kafka
+	// broker with only one adapter ever connected to it).
 	public static final String LISTENER_ID = "internCreatedListener";
 
-	@KafkaListener(id = LISTENER_ID, topics = "${iip.topics.intern-created}")
+	@KafkaListener(
+			id = LISTENER_ID,
+			groupId = "${spring.kafka.consumer.group-id}",
+			topics = "${iip.topics.intern-created}")
 	public void onInternCreated(ConsumerRecord<String, String> record) {
 		AtomicInteger attempts = new AtomicInteger(0);
 		try {
