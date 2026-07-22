@@ -39,6 +39,13 @@
 			<artifactId>spring-boot-starter-kafka</artifactId>
 		</dependency>
 		<dependency>
+			<!-- Spring Boot 4's own Jackson is Jackson 3 (tools.jackson.core), but
+			     Spring Kafka's JsonDeserializer still uses Jackson 2.x
+			     (com.fasterxml.jackson) internally, see KafkaConsumerConfig. -->
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>

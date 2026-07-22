@@ -1,5 +1,8 @@
 HELP.md
 target/
+# Default local output for CsvInternWriter/DedupStore (iip.file.*
+# properties) -- generated at runtime, never source.
+data/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
