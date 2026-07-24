@@ -24,14 +24,17 @@ public class DlqPublisher {
 	private final KafkaTemplate<String, String> kafkaTemplate;
 	private final ObjectMapper objectMapper;
 	private final String dlqTopic;
+	private final FailureClassifier classifier;
 
 	public DlqPublisher(
 			KafkaTemplate<String, String> kafkaTemplate,
 			ObjectMapper objectMapper,
-			@Value("${iip.topics.intern-dlq}") String dlqTopic) {
+			@Value("${iip.topics.intern-dlq}") String dlqTopic,
+			FailureClassifier classifier) {
 		this.kafkaTemplate = kafkaTemplate;
 		this.objectMapper = objectMapper;
 		this.dlqTopic = dlqTopic;
+		this.classifier = classifier;
 	}
 
 	public void publish(ConsumerRecord<String, String> record, Throwable error, int attemptCount) {
@@ -60,13 +63,27 @@ public class DlqPublisher {
 		}
 	}
 
-	private String errorType(Throwable error) {
+	// Package-private (not private) so focused unit tests can exercise the
+	// label decision directly without needing a real Kafka broker --
+	// publish()'s own network behavior is already covered by the
+	// Testcontainers-based DlqTest.
+	String errorType(Throwable error) {
+		// A RETRIABLE classification only reaches here once
+		// BoundedRetryExecutor has exhausted every attempt against it --
+		// that's the one case "RETRY_EXHAUSTED" actually describes. A
+		// NON_RETRIABLE classification was never retried at all (it fails
+		// on the very first attempt), so labeling it RETRY_EXHAUSTED would
+		// misdiagnose a fundamentally bad message as a target that kept
+		// failing when it never got the chance to.
+		if (classifier.classify(error) == FailureClassification.RETRIABLE) {
+			return "RETRY_EXHAUSTED";
+		}
 		for (Throwable current = error; current != null; current = current.getCause()) {
 			if (current instanceof JsonProcessingException) {
 				return "SCHEMA_VIOLATION";
 			}
 		}
-		return "RETRY_EXHAUSTED";
+		return "UNCLASSIFIED_FAILURE";
 	}
 
 	private String rootMessage(Throwable error) {
