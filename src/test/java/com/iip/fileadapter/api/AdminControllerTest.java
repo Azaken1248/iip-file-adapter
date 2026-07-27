@@ -28,6 +28,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.iip.fileadapter.EnvelopeJsonFixture.envelopeJson;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -72,11 +73,8 @@ class AdminControllerTest {
 	void listInternsReturnsWhatsInTheCsvFile() throws InterruptedException {
 		String internId = "INT-ADMIN-LIST-" + UUID.randomUUID();
 		String recordId = UUID.randomUUID().toString();
-		publish(internId, """
-				{"recordId":"%s","internId":"%s","firstName":"Ada","lastName":"Lovelace",
-				 "email":"ada@example.com","college":"MIT","department":"Platform Engineering",
-				 "mentor":"Sam","startDate":"2026-09-01","status":"ACTIVE","createdAt":"2026-07-21T14:10:00Z"}
-				""".formatted(recordId, internId));
+		publish(internId, envelopeJson(recordId, internId, "Ada", "Lovelace",
+				"ada@example.com", "MIT", "Platform Engineering", "Sam"));
 
 		Optional<InternRow> found = Optional.empty();
 		for (int i = 0; i < 20 && found.isEmpty(); i++) {
@@ -92,11 +90,8 @@ class AdminControllerTest {
 	void pausingTheListenerDelaysProcessingWithoutLosingTheMessage() throws InterruptedException, IOException {
 		String internId = "INT-ADMIN-PAUSE-" + UUID.randomUUID();
 		String recordId = UUID.randomUUID().toString();
-		String json = """
-				{"recordId":"%s","internId":"%s","firstName":"Grace","lastName":"Hopper",
-				 "email":"grace@example.com","college":"Yale","department":"Compilers",
-				 "mentor":"Howard","startDate":"2026-09-01","status":"ACTIVE","createdAt":"2026-07-21T14:10:00Z"}
-				""".formatted(recordId, internId);
+		String json = envelopeJson(recordId, internId, "Grace", "Hopper",
+				"grace@example.com", "Yale", "Compilers", "Howard");
 
 		AdminController.AdminStatusResponse paused =
 				restTemplate.postForObject("/admin/pause", null, AdminController.AdminStatusResponse.class);

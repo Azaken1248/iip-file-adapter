@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
+import static com.iip.fileadapter.EnvelopeJsonFixture.envelopeJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -48,21 +49,8 @@ class InternCreatedConsumerTest {
 	private KafkaContainer kafkaContainer;
 
 	private String eventJson(String recordId, String internId) {
-		return """
-				{
-				  "recordId": "%s",
-				  "internId": "%s",
-				  "firstName": "Grace",
-				  "lastName": "Hopper",
-				  "email": "grace@example.com",
-				  "college": "Yale",
-				  "department": "Compilers",
-				  "mentor": "Howard",
-				  "startDate": "2026-09-01",
-				  "status": "ACTIVE",
-				  "createdAt": "2026-07-21T14:10:00Z"
-				}
-				""".formatted(recordId, internId);
+		return envelopeJson(recordId, internId, "Grace", "Hopper",
+				"grace@example.com", "Yale", "Compilers", "Howard");
 	}
 
 	private void publish(String key, String json) {

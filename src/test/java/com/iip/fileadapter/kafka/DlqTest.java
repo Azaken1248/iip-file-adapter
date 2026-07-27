@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.iip.fileadapter.EnvelopeJsonFixture.envelopeJson;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -99,21 +100,8 @@ class DlqTest {
 		// normally -- the poison message didn't stall the pipeline.
 		String goodInternId = "INT-AFTER-POISON-" + UUID.randomUUID();
 		String recordId = UUID.randomUUID().toString();
-		String goodJson = """
-				{
-				  "recordId": "%s",
-				  "internId": "%s",
-				  "firstName": "Ada",
-				  "lastName": "Lovelace",
-				  "email": "ada@example.com",
-				  "college": "MIT",
-				  "department": "Platform Engineering",
-				  "mentor": "Sam",
-				  "startDate": "2026-09-01",
-				  "status": "ACTIVE",
-				  "createdAt": "2026-07-21T14:10:00Z"
-				}
-				""".formatted(recordId, goodInternId);
+		String goodJson = envelopeJson(recordId, goodInternId, "Ada", "Lovelace",
+				"ada@example.com", "MIT", "Platform Engineering", "Sam");
 		publish(goodInternId, goodJson);
 
 		Path csvPath = tempDir.resolve("interns.csv");

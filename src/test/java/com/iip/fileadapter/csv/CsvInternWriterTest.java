@@ -1,6 +1,7 @@
 package com.iip.fileadapter.csv;
 
-import com.iip.fileadapter.kafka.InternCreatedEvent;
+import com.iip.fileadapter.kafka.CanonicalEnvelope;
+import com.iip.fileadapter.kafka.InternPayload;
 import com.iip.fileadapter.model.InternStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,11 +22,21 @@ class CsvInternWriterTest {
 	@TempDir
 	Path tempDir;
 
-	private InternCreatedEvent event(String internId, String firstName, String college) {
-		return new InternCreatedEvent(
-				UUID.randomUUID(), internId, firstName, "Doe", "x@example.com",
+	// Phase 3.2 moved recordId and the timestamp out of the payload and up
+	// into the envelope. Only this fixture changed -- every assertion below
+	// is untouched, because the CSV the writer produces is byte-for-byte
+	// what it produced before.
+	private CanonicalEnvelope event(String internId, String firstName, String college) {
+		return envelope(internId, new InternPayload(
+				internId, firstName, "Doe", "x@example.com",
 				college, "Platform Engineering", "Sam", LocalDate.of(2026, 9, 1),
-				InternStatus.ACTIVE, Instant.parse("2026-07-21T14:10:00Z"));
+				InternStatus.ACTIVE));
+	}
+
+	private CanonicalEnvelope envelope(String naturalKey, InternPayload payload) {
+		return new CanonicalEnvelope(
+				UUID.randomUUID(), "interns", "intern.created", 1, naturalKey,
+				Instant.parse("2026-07-21T14:10:00Z"), null, payload);
 	}
 
 	@Test
@@ -65,10 +76,10 @@ class CsvInternWriterTest {
 		Path csvPath = tempDir.resolve("interns.csv");
 		CsvInternWriter writer = new CsvInternWriter(csvPath);
 
-		InternCreatedEvent noMentor = new InternCreatedEvent(
-				UUID.randomUUID(), "INT-CSV-4", "Ada", "Doe", "x@example.com",
+		CanonicalEnvelope noMentor = envelope("INT-CSV-4", new InternPayload(
+				"INT-CSV-4", "Ada", "Doe", "x@example.com",
 				"MIT", "Platform Engineering", null, LocalDate.of(2026, 9, 1),
-				InternStatus.ACTIVE, Instant.parse("2026-07-21T14:10:00Z"));
+				InternStatus.ACTIVE));
 
 		writer.append(noMentor);
 

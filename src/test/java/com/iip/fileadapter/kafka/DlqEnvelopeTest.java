@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static com.iip.fileadapter.EnvelopeJsonFixture.envelopeJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -83,21 +84,8 @@ class DlqEnvelopeTest {
 	void aRetryExhaustedFailureProducesACompleteAndCorrectlyLabeledEnvelope() throws Exception {
 		String internId = "INT-DLQ-EXHAUSTED-" + UUID.randomUUID();
 		String recordId = UUID.randomUUID().toString();
-		String json = """
-				{
-				  "recordId": "%s",
-				  "internId": "%s",
-				  "firstName": "Katherine",
-				  "lastName": "Johnson",
-				  "email": "katherine@example.com",
-				  "college": "West Virginia State",
-				  "department": "Orbital Mechanics",
-				  "mentor": "Dorothy",
-				  "startDate": "2026-09-01",
-				  "status": "ACTIVE",
-				  "createdAt": "2026-07-21T14:10:00Z"
-				}
-				""".formatted(recordId, internId);
+		String json = envelopeJson(recordId, internId, "Katherine", "Johnson",
+				"katherine@example.com", "West Virginia State", "Orbital Mechanics", "Dorothy");
 
 		publish(internId, json);
 		JsonNode envelope = pollForDlqEntry(internId);

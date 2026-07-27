@@ -1,6 +1,7 @@
 package com.iip.fileadapter.csv;
 
-import com.iip.fileadapter.kafka.InternCreatedEvent;
+import com.iip.fileadapter.kafka.CanonicalEnvelope;
+import com.iip.fileadapter.kafka.InternPayload;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,19 +41,25 @@ public class CsvInternWriter {
 		}
 	}
 
-	public synchronized void append(InternCreatedEvent event) {
+	// The CSV column list is unchanged by Phase 3.2's envelope split -- the
+	// first and last columns are simply sourced from the envelope now
+	// (record_id, and created_at from occurredAt) rather than from a flat
+	// event. Downstream consumers of interns.csv see no difference at all,
+	// which is the whole intent of the phase.
+	public synchronized void append(CanonicalEnvelope envelope) {
+		InternPayload payload = envelope.payload();
 		String line = String.join(",",
-				csvField(event.recordId().toString()),
-				csvField(event.internId()),
-				csvField(event.firstName()),
-				csvField(event.lastName()),
-				csvField(event.email()),
-				csvField(event.college()),
-				csvField(event.department()),
-				csvField(event.mentor() == null ? "" : event.mentor()),
-				csvField(event.startDate().toString()),
-				csvField(event.status().name()),
-				csvField(event.createdAt().toString()));
+				csvField(envelope.recordId().toString()),
+				csvField(payload.internId()),
+				csvField(payload.firstName()),
+				csvField(payload.lastName()),
+				csvField(payload.email()),
+				csvField(payload.college()),
+				csvField(payload.department()),
+				csvField(payload.mentor() == null ? "" : payload.mentor()),
+				csvField(payload.startDate().toString()),
+				csvField(payload.status().name()),
+				csvField(envelope.occurredAt().toString()));
 
 		try {
 			Files.writeString(outputPath, line + System.lineSeparator(),

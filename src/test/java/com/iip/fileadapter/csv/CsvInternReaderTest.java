@@ -1,6 +1,7 @@
 package com.iip.fileadapter.csv;
 
-import com.iip.fileadapter.kafka.InternCreatedEvent;
+import com.iip.fileadapter.kafka.CanonicalEnvelope;
+import com.iip.fileadapter.kafka.InternPayload;
 import com.iip.fileadapter.model.InternStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,10 +32,13 @@ class CsvInternReaderTest {
 		CsvInternWriter writer = new CsvInternWriter(csvPath);
 
 		UUID recordId = UUID.randomUUID();
-		writer.append(new InternCreatedEvent(
-				recordId, "INT-READ-1", "Ada", "Lovelace", "ada@example.com",
-				"MIT", "Platform Engineering", "Sam", LocalDate.of(2026, 9, 1),
-				InternStatus.ACTIVE, Instant.parse("2026-07-21T14:10:00Z")));
+		writer.append(new CanonicalEnvelope(
+				recordId, "interns", "intern.created", 1, "INT-READ-1",
+				Instant.parse("2026-07-21T14:10:00Z"), null,
+				new InternPayload(
+						"INT-READ-1", "Ada", "Lovelace", "ada@example.com",
+						"MIT", "Platform Engineering", "Sam", LocalDate.of(2026, 9, 1),
+						InternStatus.ACTIVE)));
 
 		List<InternRow> rows = new CsvInternReader(csvPath).readAll();
 
@@ -55,10 +59,13 @@ class CsvInternReaderTest {
 		Path csvPath = tempDir.resolve("interns.csv");
 		CsvInternWriter writer = new CsvInternWriter(csvPath);
 
-		writer.append(new InternCreatedEvent(
-				UUID.randomUUID(), "INT-READ-2", "Ada", "Lovelace", "ada@example.com",
-				"University of X, Y Campus", "Platform Engineering", null, LocalDate.of(2026, 9, 1),
-				InternStatus.ACTIVE, Instant.parse("2026-07-21T14:10:00Z")));
+		writer.append(new CanonicalEnvelope(
+				UUID.randomUUID(), "interns", "intern.created", 1, "INT-READ-2",
+				Instant.parse("2026-07-21T14:10:00Z"), null,
+				new InternPayload(
+						"INT-READ-2", "Ada", "Lovelace", "ada@example.com",
+						"University of X, Y Campus", "Platform Engineering", null,
+						LocalDate.of(2026, 9, 1), InternStatus.ACTIVE)));
 
 		List<InternRow> rows = new CsvInternReader(csvPath).readAll();
 

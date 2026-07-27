@@ -73,18 +73,22 @@ public class InternCreatedConsumer {
 		}
 	}
 
+	// The dedup key is recordId -- an envelope field, unique per event and
+	// universal across every contract. Nothing in this method reads the
+	// payload, which is precisely why the idempotency guarantee survived
+	// the envelope split untouched.
 	private void process(String json) {
-		InternCreatedEvent event = deserialize(json);
-		if (dedupStore.isProcessed(event.recordId())) {
+		CanonicalEnvelope envelope = deserialize(json);
+		if (dedupStore.isProcessed(envelope.recordId())) {
 			return;
 		}
-		csvInternWriter.append(event);
-		dedupStore.markProcessed(event.recordId());
+		csvInternWriter.append(envelope);
+		dedupStore.markProcessed(envelope.recordId());
 	}
 
-	private InternCreatedEvent deserialize(String json) {
+	private CanonicalEnvelope deserialize(String json) {
 		try {
-			return objectMapper.readValue(json, InternCreatedEvent.class);
+			return objectMapper.readValue(json, CanonicalEnvelope.class);
 		} catch (JsonProcessingException e) {
 			throw new RuntimeException(e);
 		}

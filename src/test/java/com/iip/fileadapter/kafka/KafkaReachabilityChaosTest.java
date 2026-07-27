@@ -23,6 +23,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.iip.fileadapter.EnvelopeJsonFixture.envelopeJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -72,21 +73,8 @@ class KafkaReachabilityChaosTest {
 	}
 
 	private String internJson(String recordId, String internId, String firstName) {
-		return """
-				{
-				  "recordId": "%s",
-				  "internId": "%s",
-				  "firstName": "%s",
-				  "lastName": "Test",
-				  "email": "%s@example.com",
-				  "college": "MIT",
-				  "department": "Chaos Engineering",
-				  "mentor": "Sam",
-				  "startDate": "2026-09-01",
-				  "status": "ACTIVE",
-				  "createdAt": "2026-07-21T14:10:00Z"
-				}
-				""".formatted(recordId, internId, firstName, firstName.toLowerCase());
+		return envelopeJson(recordId, internId, firstName, "Test",
+				firstName.toLowerCase() + "@example.com", "MIT", "Chaos Engineering", "Sam");
 	}
 
 	@Test
