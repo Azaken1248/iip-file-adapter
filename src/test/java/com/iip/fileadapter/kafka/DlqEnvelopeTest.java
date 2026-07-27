@@ -74,7 +74,7 @@ class DlqEnvelopeTest {
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
 		try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-			producer.send(new ProducerRecord<>("intern.created", key, json)).get();
+			producer.send(new ProducerRecord<>("interns.created", key, json)).get();
 		} catch (Exception e) {
 			fail("failed to publish test message: " + e.getMessage());
 		}
@@ -90,9 +90,9 @@ class DlqEnvelopeTest {
 		publish(internId, json);
 		JsonNode envelope = pollForDlqEntry(internId);
 
-		assertTrue(envelope != null, "expected the message to land on intern.dlq once its retry budget was exhausted");
+		assertTrue(envelope != null, "expected the message to land on iip.dlq once its retry budget was exhausted");
 
-		assertEquals("intern.created", envelope.get("originalTopic").asText());
+		assertEquals("interns.created", envelope.get("originalTopic").asText());
 		assertTrue(envelope.get("originalPartition").asInt() >= 0);
 		assertTrue(envelope.get("originalOffset").asLong() >= 0);
 		assertEquals(internId, envelope.get("originalKey").asText());
@@ -118,7 +118,7 @@ class DlqEnvelopeTest {
 		consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
 		try (Consumer<String, String> dlqConsumer = new KafkaConsumer<>(consumerProps)) {
-			dlqConsumer.subscribe(List.of("intern.dlq"));
+			dlqConsumer.subscribe(List.of("iip.dlq"));
 			for (int i = 0; i < 20; i++) {
 				var records = dlqConsumer.poll(Duration.ofMillis(500));
 				for (ConsumerRecord<String, String> r : records) {

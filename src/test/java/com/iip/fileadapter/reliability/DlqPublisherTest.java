@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  */
 class DlqPublisherTest {
 
-	private final DlqPublisher publisher = new DlqPublisher(null, new ObjectMapper(), "intern.dlq", new FailureClassifier());
+	private final DlqPublisher publisher = new DlqPublisher(null, new ObjectMapper(), "iip.dlq", new FailureClassifier());
 
 	@Test
 	void anExhaustedRetriableFailureIsLabeledRetryExhausted() {

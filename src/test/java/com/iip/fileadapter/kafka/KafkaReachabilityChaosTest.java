@@ -66,7 +66,7 @@ class KafkaReachabilityChaosTest {
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
 		try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-			producer.send(new ProducerRecord<>("intern.created", key, json)).get();
+			producer.send(new ProducerRecord<>("interns.created", key, json)).get();
 		} catch (Exception e) {
 			fail("failed to publish test message: " + e.getMessage());
 		}
@@ -102,12 +102,12 @@ class KafkaReachabilityChaosTest {
 			// that already has cached metadata from a prior send just
 			// queues the record and lets its background I/O thread retry
 			// the actual network send once the broker's reachable again.
-			producer.send(new ProducerRecord<>("intern.created", internBefore,
+			producer.send(new ProducerRecord<>("interns.created", internBefore,
 					internJson(UUID.randomUUID().toString(), internBefore, "Before"))).get();
 
 			dockerClient.pauseContainerCmd(containerId).exec();
 			try {
-				producer.send(new ProducerRecord<>("intern.created", internDuring,
+				producer.send(new ProducerRecord<>("interns.created", internDuring,
 						internJson(UUID.randomUUID().toString(), internDuring, "During")));
 				Thread.sleep(3000);
 			} finally {

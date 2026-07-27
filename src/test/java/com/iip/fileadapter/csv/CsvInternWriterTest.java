@@ -35,7 +35,7 @@ class CsvInternWriterTest {
 
 	private CanonicalEnvelope envelope(String naturalKey, InternPayload payload) {
 		return new CanonicalEnvelope(
-				UUID.randomUUID(), "interns", "intern.created", 1, naturalKey,
+				UUID.randomUUID(), "interns", "interns.created", 1, naturalKey,
 				Instant.parse("2026-07-21T14:10:00Z"), null, payload);
 	}
 

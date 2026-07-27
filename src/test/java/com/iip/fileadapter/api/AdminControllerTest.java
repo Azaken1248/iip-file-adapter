@@ -63,7 +63,7 @@ class AdminControllerTest {
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
 		try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-			producer.send(new ProducerRecord<>("intern.created", key, json)).get();
+			producer.send(new ProducerRecord<>("interns.created", key, json)).get();
 		} catch (Exception e) {
 			fail("failed to publish test message: " + e.getMessage());
 		}

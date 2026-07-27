@@ -47,7 +47,7 @@ public class InternCreatedConsumer {
 	// string isn't unique across services -- db-adapter uses the exact
 	// same LISTENER_ID for its own listener. Without an explicit groupId
 	// here, both adapters would silently join the *same* Kafka consumer
-	// group and split intern.created's partitions between them instead of
+	// group and split interns.created's partitions between them instead of
 	// each independently seeing every message, breaking the fan-out
 	// guarantee (caught via a real docker-compose run, not the test suite,
 	// since each adapter's Testcontainers tests use an isolated Kafka

@@ -33,7 +33,7 @@ class CsvInternReaderTest {
 
 		UUID recordId = UUID.randomUUID();
 		writer.append(new CanonicalEnvelope(
-				recordId, "interns", "intern.created", 1, "INT-READ-1",
+				recordId, "interns", "interns.created", 1, "INT-READ-1",
 				Instant.parse("2026-07-21T14:10:00Z"), null,
 				new InternPayload(
 						"INT-READ-1", "Ada", "Lovelace", "ada@example.com",
@@ -60,7 +60,7 @@ class CsvInternReaderTest {
 		CsvInternWriter writer = new CsvInternWriter(csvPath);
 
 		writer.append(new CanonicalEnvelope(
-				UUID.randomUUID(), "interns", "intern.created", 1, "INT-READ-2",
+				UUID.randomUUID(), "interns", "interns.created", 1, "INT-READ-2",
 				Instant.parse("2026-07-21T14:10:00Z"), null,
 				new InternPayload(
 						"INT-READ-2", "Ada", "Lovelace", "ada@example.com",

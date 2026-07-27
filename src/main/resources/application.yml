@@ -30,8 +30,12 @@ iip:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   topics:
-    intern-created: intern.created
-    intern-dlq: intern.dlq
+    # Phase 3.6: topics are derived from the contract id
+    # ({contractId}.created). The DLQ is platform-wide, not per
+    # contract -- it is an operator surface, filterable by the
+    # contractId every DLQ envelope carries.
+    intern-created: ${TOPIC_INTERNS_CREATED:interns.created}
+    intern-dlq: ${TOPIC_DLQ:iip.dlq}
   file:
     output-path: ${FILE_OUTPUT_PATH:./data/interns.csv}
     dedup-store-path: ${DEDUP_STORE_PATH:./data/file-adapter-dedup}

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Publishes non-retriable / retry-exhausted failures to intern.dlq as a
+ * Publishes non-retriable / retry-exhausted failures to iip.dlq as a
  * DlqEnvelope (docs/03-data-model.md §3), preserving the original message
  * rather than discarding it -- this is what turns a poison message into a
  * quarantine instead of a pipeline stall (Architecture §6).

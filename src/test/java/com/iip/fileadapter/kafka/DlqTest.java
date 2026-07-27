@@ -61,7 +61,7 @@ class DlqTest {
 		props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
 		try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-			producer.send(new ProducerRecord<>("intern.created", key, json)).get();
+			producer.send(new ProducerRecord<>("interns.created", key, json)).get();
 		} catch (Exception e) {
 			fail("failed to publish test message: " + e.getMessage());
 		}
@@ -81,7 +81,7 @@ class DlqTest {
 
 		boolean foundOnDlq = false;
 		try (Consumer<String, String> dlqConsumer = new KafkaConsumer<>(consumerProps)) {
-			dlqConsumer.subscribe(List.of("intern.dlq"));
+			dlqConsumer.subscribe(List.of("iip.dlq"));
 			for (int i = 0; i < 20 && !foundOnDlq; i++) {
 				var records = dlqConsumer.poll(Duration.ofMillis(500));
 				for (ConsumerRecord<String, String> r : records) {
@@ -94,7 +94,7 @@ class DlqTest {
 				}
 			}
 		}
-		assertTrue(foundOnDlq, "expected the malformed message to land on intern.dlq within the poll window");
+		assertTrue(foundOnDlq, "expected the malformed message to land on iip.dlq within the poll window");
 
 		// A subsequent good message on the same topic should still process
 		// normally -- the poison message didn't stall the pipeline.
