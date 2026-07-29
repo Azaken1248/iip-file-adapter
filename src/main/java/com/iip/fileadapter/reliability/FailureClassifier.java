@@ -1,6 +1,7 @@
 package com.iip.fileadapter.reliability;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.iip.fileadapter.schema.EnvelopeSchemaViolationException;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -30,6 +31,11 @@ import java.util.List;
 public class FailureClassifier {
 
 	private static final List<ClassificationRule> RULES = List.of(
+			new ClassificationRule(EnvelopeSchemaViolationException.class, FailureClassification.NON_RETRIABLE,
+					"the message doesn't match the registered envelope schema -- the bytes and the schema are both "
+							+ "fixed for the lifetime of this attempt, so every retry would fail identically. Listed "
+							+ "explicitly rather than left to the unknown-type default below, because the default is "
+							+ "a safety net and this is a decision"),
 			new ClassificationRule(JsonProcessingException.class, FailureClassification.NON_RETRIABLE,
 					"malformed/unparseable message payload -- reprocessing identical bytes can't fix this"),
 			new ClassificationRule(NoSuchFileException.class, FailureClassification.NON_RETRIABLE,

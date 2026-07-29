@@ -29,6 +29,17 @@ management:
 iip:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  envelope-schema:
+    # Phase 4.8. `registry` fetches the platform's envelope schema from the
+    # Schema Registry at startup; `classpath` reads a fixture, which is how
+    # tests run. The default is `classpath` and the packaged jar carries no
+    # schema file, so a deployment that forgets to set this fails at startup
+    # naming what is missing rather than consuming unvalidated messages.
+    source: ${ENVELOPE_SCHEMA_SOURCE:classpath}
+    registry-url: ${SCHEMA_REGISTRY_URL:http://localhost:8085}
+    # One subject for the whole platform: the envelope is identical for every
+    # contract, so per-topic subjects would be N copies of one artifact.
+    subject: ${ENVELOPE_SCHEMA_SUBJECT:iip.envelope-value}
   topics:
     # Phase 3.6: topics are derived from the contract id
     # ({contractId}.created). The DLQ is platform-wide, not per

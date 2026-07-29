@@ -28,6 +28,9 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- 3.x is the line built on Jackson 3 (tools.jackson), which is what
+		     Spring Boot 4 uses. -->
+		<json-schema-validator.version>3.0.6</json-schema-validator.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -48,6 +51,26 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<!-- Phase 4.8 fetches the envelope schema over HTTP. In Spring
+			     Boot 4 the RestClient.Builder bean comes from its own module,
+			     which the webmvc starter does not pull in; it reaches the test
+			     classpath transitively via the restclient-test starter below,
+			     so leaving it out here builds a jar that fails only at
+			     runtime. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient</artifactId>
+		</dependency>
+		<dependency>
+			<!-- Phase 4.8's envelope validation on the consuming side. A JSON
+			     Schema validator rather than Confluent's deserializer stack:
+			     the registry owns the schema, but what arrives off the topic
+			     stays plain canonical JSON, so this adapter still depends on
+			     nothing but the bytes. -->
+			<groupId>com.networknt</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>${json-schema-validator.version}</version>
 		</dependency>
 
 		<dependency>

@@ -2,6 +2,7 @@ package com.iip.fileadapter.reliability;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iip.fileadapter.schema.EnvelopeSchemaViolationException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -79,7 +80,13 @@ public class DlqPublisher {
 			return "RETRY_EXHAUSTED";
 		}
 		for (Throwable current = error; current != null; current = current.getCause()) {
-			if (current instanceof JsonProcessingException) {
+			// Both are the same operator-facing fact -- "this message was not
+			// a valid envelope" -- and Phase 4.8 only changed which of them
+			// fires first. The schema check now runs before deserialization,
+			// so bytes that used to reach here as a Jackson parse failure
+			// arrive as a schema violation instead; the DLQ entry must not
+			// change category because of that reordering.
+			if (current instanceof EnvelopeSchemaViolationException || current instanceof JsonProcessingException) {
 				return "SCHEMA_VIOLATION";
 			}
 		}

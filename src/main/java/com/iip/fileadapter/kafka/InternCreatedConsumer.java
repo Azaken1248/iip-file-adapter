@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iip.fileadapter.csv.CsvInternWriter;
 import com.iip.fileadapter.dedup.DedupStore;
 import com.iip.fileadapter.reliability.BoundedRetryExecutor;
+import com.iip.fileadapter.schema.EnvelopeSchema;
 import com.iip.fileadapter.reliability.DlqPublisher;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,6 +25,7 @@ public class InternCreatedConsumer {
 	private final DedupStore dedupStore;
 	private final CsvInternWriter csvInternWriter;
 	private final ObjectMapper objectMapper;
+	private final EnvelopeSchema envelopeSchema;
 	private final BoundedRetryExecutor retryExecutor;
 	private final DlqPublisher dlqPublisher;
 
@@ -31,11 +33,13 @@ public class InternCreatedConsumer {
 			DedupStore dedupStore,
 			CsvInternWriter csvInternWriter,
 			ObjectMapper objectMapper,
+			EnvelopeSchema envelopeSchema,
 			BoundedRetryExecutor retryExecutor,
 			DlqPublisher dlqPublisher) {
 		this.dedupStore = dedupStore;
 		this.csvInternWriter = csvInternWriter;
 		this.objectMapper = objectMapper;
+		this.envelopeSchema = envelopeSchema;
 		this.retryExecutor = retryExecutor;
 		this.dlqPublisher = dlqPublisher;
 	}
@@ -78,6 +82,15 @@ public class InternCreatedConsumer {
 	// payload, which is precisely why the idempotency guarantee survived
 	// the envelope split untouched.
 	private void process(String json) {
+		// Phase 4.8: the boundary check, and deliberately the first statement
+		// of the handling path. Everything after this line -- deserialization,
+		// the dedup guard, the CSV append -- is entitled to assume the
+		// envelope's shape, which is what "rejected at the boundary, not deep
+		// in business logic" has to mean to be worth anything. Note that it
+		// runs *before* the dedup store is touched: a malformed message must
+		// not be able to record itself as seen.
+		envelopeSchema.validate(json);
+
 		CanonicalEnvelope envelope = deserialize(json);
 		if (dedupStore.isProcessed(envelope.recordId())) {
 			return;
