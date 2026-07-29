@@ -1,5 +1,6 @@
 package com.iip.fileadapter.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -29,6 +30,24 @@ public class JacksonConfig {
 	public ObjectMapper objectMapper() {
 		return new ObjectMapper()
 				.registerModule(new JavaTimeModule())
-				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+				// Phase 4.11. Jackson enables FAIL_ON_UNKNOWN_PROPERTIES by
+				// default, so a hand-built ObjectMapper rejects exactly the
+				// change Data Model 5.2 advertises as the safe, ordinary one:
+				// adding an optional field to a contract. Left on, an operator
+				// adding a field through the control plane would get approval
+				// from the registry, the compatibility gate, and the source
+				// service -- and then one DLQ entry per record from an adapter
+				// nobody had touched.
+				//
+				// The source service does the opposite and rejects undeclared
+				// payload keys, which is not an inconsistency. There an unknown
+				// key is a typo or a client ahead of the schema, and accepting
+				// it would hide data loss behind a 202. Here it means the
+				// contract moved ahead of this adapter's mapping, which is the
+				// normal state of services that deploy independently. Producer
+				// strict, consumer tolerant -- the same rule the envelope
+				// schema follows by leaving additionalProperties open.
+				.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 	}
 }
