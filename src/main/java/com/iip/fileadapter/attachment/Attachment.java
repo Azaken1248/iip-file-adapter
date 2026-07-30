@@ -1,6 +1,8 @@
 package com.iip.fileadapter.attachment;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,5 +56,31 @@ public record Attachment(String attachmentId, String contractId, Map<String, Obj
 		((Map<String, Object>) nested).forEach(
 				(nestedKey, value) -> stringified.put(String.valueOf(nestedKey), String.valueOf(value)));
 		return stringified;
+	}
+
+	/**
+	 * A nested config <em>array</em>, for configuration where order is part of
+	 * the meaning -- a column list, for instance (Phase 6.3).
+	 *
+	 * <p>An array rather than an object, and this is not a style preference:
+	 * an attachment's config is stored in a {@code jsonb} column, and jsonb
+	 * does not preserve the key order of an object. It sorts keys by length and
+	 * then bytewise, so a column mapping written as an object comes back
+	 * rearranged -- which unit tests handing a LinkedHashMap straight to the
+	 * writer will never show, and a real deployment shows immediately, as a
+	 * file whose rows no longer match its own header.
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> configList(String key) {
+		if (!(config.get(key) instanceof List<?> nested)) {
+			return List.of();
+		}
+		List<Map<String, Object>> entries = new ArrayList<>();
+		for (Object element : nested) {
+			if (element instanceof Map<?, ?> entry) {
+				entries.add((Map<String, Object>) entry);
+			}
+		}
+		return entries;
 	}
 }

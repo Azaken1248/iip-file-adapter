@@ -1,6 +1,25 @@
 {
   "type": "csv",
   "title": "CSV File",
-  "description": "Appends each record as a line to a file on disk. Suited to feeding a downstream batch job or a reporting tool that reads a directory rather than an API. This type takes no per-attachment configuration yet: the output path and the columns are set per deployment, so every contract attached to it writes to the same file.",
-  "configFields": []
+  "description": "Appends each record as a line to a file on disk. Suited to feeding a downstream batch job or a reporting tool that reads a directory rather than an API. Each attached contract writes its own file with its own columns.",
+  "configFields": [
+    {
+      "name": "path",
+      "label": "Output file",
+      "type": "string",
+      "required": false,
+      "description": "Where to write, as a path inside the adapter's container. Defaults to this deployment's configured output file, so two contracts that do not set it will share one file and interleave."
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "list",
+      "required": true,
+      "itemFields": [
+        {"name": "header", "type": "string", "required": true, "description": "The column heading to write."},
+        {"name": "field", "type": "string", "required": true, "description": "The payload field to read."}
+      ],
+      "description": "The columns to write, in order, e.g. [{\"header\": \"first_name\", \"field\": \"firstName\"}]. A list rather than an object because the order is part of the meaning and object key order is not preserved in storage. record_id is always written first and created_at always last, from the envelope -- do not list them."
+    }
+  ]
 }

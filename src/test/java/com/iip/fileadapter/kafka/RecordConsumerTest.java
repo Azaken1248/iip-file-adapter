@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
-class InternCreatedConsumerTest {
+class RecordConsumerTest {
 
 	@TempDir
 	static Path tempDir;

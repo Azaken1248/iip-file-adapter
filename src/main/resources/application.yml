@@ -8,6 +8,15 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        # Phase 6.3, matching the db-adapter and for the same reason: with a
+        # topic *pattern* this is the only way a new topic is ever discovered.
+        # A pattern cannot auto-create a missing topic the way an explicit
+        # subscription can, so a consumer that starts before its topics exist
+        # is assigned zero partitions until the next metadata refresh -- five
+        # minutes, by default, of a newly attached contract appearing not to
+        # work.
+        metadata.max.age.ms: ${KAFKA_METADATA_MAX_AGE_MS:5000}
     producer:
       # DLQ envelopes are built and JSON-serialized by hand (DlqPublisher),
       # not via a JSON-aware Kafka serializer.
@@ -45,17 +54,23 @@ iip:
     # ({contractId}.created). The DLQ is platform-wide, not per
     # contract -- it is an operator surface, filterable by the
     # contractId every DLQ envelope carries.
-    intern-created: ${TOPIC_INTERNS_CREATED:interns.created}
+    # Phase 6.3: a *pattern*, not a named topic, for the same reason the
+    # db-adapter uses one. A contract attached to this adapter through the
+    # control plane gets a topic no deployment descriptor mentions, so a
+    # listener bound to one name could only ever serve the contract it was
+    # deployed for -- which is the definition of a bespoke service rather than
+    # a catalog type.
+    #
+    # Deliberately does not match iip.dlq: an adapter consuming the quarantine
+    # topic it publishes to would re-process its own poison messages forever.
+    pattern: ${TOPIC_PATTERN:.*\.created}
     intern-dlq: ${TOPIC_DLQ:iip.dlq}
   attachments:
-    # Phase 6.2. The contract this adapter is attached to, as this deployment
-    # believes it -- the same contract the topic above names, since a topic is
-    # {contractId}.created.
-    #
-    # Phase 6.3 replaces this with the registry read path the db-adapter
-    # already has, at which point the attachment stops being deployment config
-    # and becomes what it should be: a row someone can add from the UI.
-    contract-id: ${CONTRACT_ID:interns}
+    # Phase 6.3. Which contracts this adapter writes for, and where each one
+    # goes, is registry data -- attaching a target must not need a redeploy.
+    # What is configured here is only where to ask, and how often to ask again.
+    registry-url: ${CONTRACT_REGISTRY_URL:http://localhost:8083}
+    refresh-interval-ms: ${ATTACHMENT_REFRESH_INTERVAL_MS:30000}
   catalog:
     # Phase 6.1. Where to announce that a `csv` adapter type exists. Only the
     # address is configured -- what is announced ships in the jar, next to the

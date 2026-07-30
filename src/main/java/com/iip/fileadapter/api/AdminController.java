@@ -2,7 +2,7 @@ package com.iip.fileadapter.api;
 
 import com.iip.fileadapter.csv.CsvInternReader;
 import com.iip.fileadapter.csv.InternRow;
-import com.iip.fileadapter.kafka.InternCreatedConsumer;
+import com.iip.fileadapter.kafka.RecordConsumer;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,7 +68,7 @@ public class AdminController {
 	}
 
 	private MessageListenerContainer container() {
-		return registry.getListenerContainer(InternCreatedConsumer.LISTENER_ID);
+		return registry.getListenerContainer(RecordConsumer.LISTENER_ID);
 	}
 
 	public record AdminStatusResponse(boolean paused) {

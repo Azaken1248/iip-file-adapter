@@ -19,14 +19,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * the subscription, the retry budget, and the guarantee that a message this
  * adapter cannot handle does not stall the partition behind it.
  *
- * <p>Still bound to one named topic, unlike the db-adapter's pattern
- * subscription. That is the visible remainder of this adapter not yet having an
- * attachment read path, and it is Phase 6.3's subject rather than an oversight:
- * subscribing to every contract's stream would be pointless while the only
- * contract it can be attached to is the one in its own configuration.
+ * <p>It subscribes by <em>pattern</em> (Phase 6.3), because a contract attached
+ * to this adapter through the control plane gets a topic no deployment
+ * descriptor mentions -- and a listener bound to one name could only ever serve
+ * the contract it was deployed for, which is a bespoke service rather than an
+ * instance of a catalog type.
  */
 @Component
-public class InternCreatedConsumer {
+public class RecordConsumer {
 
 	// groupId is set explicitly and separately: @KafkaListener's id doubles
 	// as the Kafka consumer group id by default (idIsGroup), and this id
@@ -44,7 +44,7 @@ public class InternCreatedConsumer {
 	private final BoundedRetryExecutor retryExecutor;
 	private final DlqPublisher dlqPublisher;
 
-	public InternCreatedConsumer(
+	public RecordConsumer(
 			RecordPipeline pipeline,
 			BoundedRetryExecutor retryExecutor,
 			DlqPublisher dlqPublisher) {
@@ -57,8 +57,8 @@ public class InternCreatedConsumer {
 	@KafkaListener(
 			id = LISTENER_ID,
 			groupId = "${spring.kafka.consumer.group-id}",
-			topics = "${iip.topics.intern-created}")
-	public void onInternCreated(ConsumerRecord<String, String> record) {
+			topicPattern = "${iip.topics.pattern}")
+	public void onRecord(ConsumerRecord<String, String> record) {
 		AtomicInteger attempts = new AtomicInteger(0);
 		try {
 			retryExecutor.executeWithRetry(() -> {
