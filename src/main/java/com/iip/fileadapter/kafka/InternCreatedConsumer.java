@@ -1,11 +1,7 @@
 package com.iip.fileadapter.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.iip.fileadapter.csv.CsvInternWriter;
-import com.iip.fileadapter.dedup.DedupStore;
+import com.iip.fileadapter.pipeline.RecordPipeline;
 import com.iip.fileadapter.reliability.BoundedRetryExecutor;
-import com.iip.fileadapter.schema.EnvelopeSchema;
 import com.iip.fileadapter.reliability.DlqPublisher;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,38 +10,24 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Deserialization happens by hand here (not via a Kafka JsonDeserializer)
- * so a malformed payload is just another failure the retry+classify+DLQ
- * pipeline handles uniformly -- Architecture §6's DESER and WRITE steps
- * are both "the action" as far as BoundedRetryExecutor is concerned.
+ * Delivery: takes records off the topic and makes sure each one is either
+ * applied, quarantined, or skipped -- and that the offset moves either way.
+ *
+ * <p>Everything about <em>what</em> a record means now lives in
+ * {@link RecordPipeline}, which after Phase 6.2 reads identically to the
+ * db-adapter's. What is left here is the part that is genuinely about Kafka:
+ * the subscription, the retry budget, and the guarantee that a message this
+ * adapter cannot handle does not stall the partition behind it.
+ *
+ * <p>Still bound to one named topic, unlike the db-adapter's pattern
+ * subscription. That is the visible remainder of this adapter not yet having an
+ * attachment read path, and it is Phase 6.3's subject rather than an oversight:
+ * subscribing to every contract's stream would be pointless while the only
+ * contract it can be attached to is the one in its own configuration.
  */
 @Component
 public class InternCreatedConsumer {
 
-	private final DedupStore dedupStore;
-	private final CsvInternWriter csvInternWriter;
-	private final ObjectMapper objectMapper;
-	private final EnvelopeSchema envelopeSchema;
-	private final BoundedRetryExecutor retryExecutor;
-	private final DlqPublisher dlqPublisher;
-
-	public InternCreatedConsumer(
-			DedupStore dedupStore,
-			CsvInternWriter csvInternWriter,
-			ObjectMapper objectMapper,
-			EnvelopeSchema envelopeSchema,
-			BoundedRetryExecutor retryExecutor,
-			DlqPublisher dlqPublisher) {
-		this.dedupStore = dedupStore;
-		this.csvInternWriter = csvInternWriter;
-		this.objectMapper = objectMapper;
-		this.envelopeSchema = envelopeSchema;
-		this.retryExecutor = retryExecutor;
-		this.dlqPublisher = dlqPublisher;
-	}
-
-	// The explicit id is what AdminController looks up via
-	// KafkaListenerEndpointRegistry to pause/resume this specific listener.
 	// groupId is set explicitly and separately: @KafkaListener's id doubles
 	// as the Kafka consumer group id by default (idIsGroup), and this id
 	// string isn't unique across services -- db-adapter uses the exact
@@ -58,6 +40,20 @@ public class InternCreatedConsumer {
 	// broker with only one adapter ever connected to it).
 	public static final String LISTENER_ID = "internCreatedListener";
 
+	private final RecordPipeline pipeline;
+	private final BoundedRetryExecutor retryExecutor;
+	private final DlqPublisher dlqPublisher;
+
+	public InternCreatedConsumer(
+			RecordPipeline pipeline,
+			BoundedRetryExecutor retryExecutor,
+			DlqPublisher dlqPublisher) {
+
+		this.pipeline = pipeline;
+		this.retryExecutor = retryExecutor;
+		this.dlqPublisher = dlqPublisher;
+	}
+
 	@KafkaListener(
 			id = LISTENER_ID,
 			groupId = "${spring.kafka.consumer.group-id}",
@@ -67,43 +63,13 @@ public class InternCreatedConsumer {
 		try {
 			retryExecutor.executeWithRetry(() -> {
 				attempts.incrementAndGet();
-				process(record.value());
+				pipeline.apply(record.value());
 			});
 		} catch (RuntimeException e) {
 			// Handled, not lost: quarantine to the DLQ, then let the
 			// listener return normally so the offset commits and the
 			// pipeline keeps moving instead of stalling on this message.
 			dlqPublisher.publish(record, e, attempts.get());
-		}
-	}
-
-	// The dedup key is recordId -- an envelope field, unique per event and
-	// universal across every contract. Nothing in this method reads the
-	// payload, which is precisely why the idempotency guarantee survived
-	// the envelope split untouched.
-	private void process(String json) {
-		// Phase 4.8: the boundary check, and deliberately the first statement
-		// of the handling path. Everything after this line -- deserialization,
-		// the dedup guard, the CSV append -- is entitled to assume the
-		// envelope's shape, which is what "rejected at the boundary, not deep
-		// in business logic" has to mean to be worth anything. Note that it
-		// runs *before* the dedup store is touched: a malformed message must
-		// not be able to record itself as seen.
-		envelopeSchema.validate(json);
-
-		CanonicalEnvelope envelope = deserialize(json);
-		if (dedupStore.isProcessed(envelope.recordId())) {
-			return;
-		}
-		csvInternWriter.append(envelope);
-		dedupStore.markProcessed(envelope.recordId());
-	}
-
-	private CanonicalEnvelope deserialize(String json) {
-		try {
-			return objectMapper.readValue(json, CanonicalEnvelope.class);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
 		}
 	}
 }

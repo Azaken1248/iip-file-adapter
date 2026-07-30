@@ -47,6 +47,15 @@ iip:
     # contractId every DLQ envelope carries.
     intern-created: ${TOPIC_INTERNS_CREATED:interns.created}
     intern-dlq: ${TOPIC_DLQ:iip.dlq}
+  attachments:
+    # Phase 6.2. The contract this adapter is attached to, as this deployment
+    # believes it -- the same contract the topic above names, since a topic is
+    # {contractId}.created.
+    #
+    # Phase 6.3 replaces this with the registry read path the db-adapter
+    # already has, at which point the attachment stops being deployment config
+    # and becomes what it should be: a row someone can add from the UI.
+    contract-id: ${CONTRACT_ID:interns}
   catalog:
     # Phase 6.1. Where to announce that a `csv` adapter type exists. Only the
     # address is configured -- what is announced ships in the jar, next to the
