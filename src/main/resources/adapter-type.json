@@ -1,0 +1,6 @@
+{
+  "type": "csv",
+  "title": "CSV File",
+  "description": "Appends each record as a line to a file on disk. Suited to feeding a downstream batch job or a reporting tool that reads a directory rather than an API. This type takes no per-attachment configuration yet: the output path and the columns are set per deployment, so every contract attached to it writes to the same file.",
+  "configFields": []
+}

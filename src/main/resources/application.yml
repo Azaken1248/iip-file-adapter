@@ -47,6 +47,17 @@ iip:
     # contractId every DLQ envelope carries.
     intern-created: ${TOPIC_INTERNS_CREATED:interns.created}
     intern-dlq: ${TOPIC_DLQ:iip.dlq}
+  catalog:
+    # Phase 6.1. Where to announce that a `csv` adapter type exists. Only the
+    # address is configured -- what is announced ships in the jar, next to the
+    # code that implements it, so the two cannot drift.
+    #
+    # Unlike the db-adapter's registry URL, this one is not required for the
+    # adapter to work: this service reads its topic and its output path from
+    # its own configuration, so an unreachable registry costs it a line in a
+    # dropdown and nothing else.
+    registry-url: ${CONTRACT_REGISTRY_URL:http://localhost:8083}
+    refresh-interval-ms: ${CATALOG_REFRESH_INTERVAL_MS:30000}
   file:
     output-path: ${FILE_OUTPUT_PATH:./data/interns.csv}
     dedup-store-path: ${DEDUP_STORE_PATH:./data/file-adapter-dedup}
