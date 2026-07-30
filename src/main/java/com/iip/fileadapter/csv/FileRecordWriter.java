@@ -1,8 +1,10 @@
 package com.iip.fileadapter.csv;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.iip.fileadapter.attachment.Attachment;
 import com.iip.fileadapter.attachment.AttachmentConfigurationException;
+import com.iip.fileadapter.format.Column;
+import com.iip.fileadapter.format.RecordFormatter;
+import com.iip.fileadapter.format.RecordFormatters;
 import com.iip.fileadapter.pipeline.RecordEnvelope;
 
 import java.io.IOException;
@@ -38,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * makes it a catalog type rather than a bespoke service: the path and the
  * columns arrive with each record, not in a field.
  */
-public class CsvRecordWriter {
+public class FileRecordWriter {
 
 	private final Path defaultPath;
 
@@ -52,8 +54,11 @@ public class CsvRecordWriter {
 	 */
 	private final Map<Path, Boolean> headerWritten = new ConcurrentHashMap<>();
 
-	public CsvRecordWriter(Path defaultPath) {
+	private final RecordFormatters formatters;
+
+	public FileRecordWriter(Path defaultPath, RecordFormatters formatters) {
 		this.defaultPath = defaultPath;
+		this.formatters = formatters;
 	}
 
 	public synchronized void append(RecordEnvelope envelope, Attachment attachment) {
@@ -65,32 +70,14 @@ public class CsvRecordWriter {
 							+ "them there is nothing to write but the envelope");
 		}
 
+		// Phase 6.4: which format, from the attachment. csv is the default
+		// because it is what every existing attachment means by saying nothing.
+		RecordFormatter formatter = formatters.require(attachment.configString("format", "csv"));
+
 		Path path = pathFor(attachment);
-		ensureHeader(path, columns);
+		ensureHeader(path, formatter, columns);
 
-		JsonNode payload = envelope.payload();
-		List<String> values = new ArrayList<>();
-		values.add(csvField(envelope.recordId().toString()));
-		columns.forEach(column -> values.add(csvField(valueOf(payload, column.field()))));
-		values.add(csvField(envelope.occurredAt().toString()));
-
-		write(path, String.join(",", values) + System.lineSeparator());
-	}
-
-	/**
-	 * A payload field as text, or empty when the contract left it out.
-	 *
-	 * <p>Empty rather than the string "null", which is what a naive
-	 * {@code String.valueOf} would write and what a downstream spreadsheet
-	 * would then show as a value. An absent optional field and an empty one are
-	 * the same thing in CSV, which has no way to say otherwise.
-	 */
-	private static String valueOf(JsonNode payload, String field) {
-		JsonNode value = payload.path(field);
-		if (value.isMissingNode() || value.isNull()) {
-			return "";
-		}
-		return value.isValueNode() ? value.asText() : value.toString();
+		write(path, formatter.format(envelope, columns) + System.lineSeparator());
 	}
 
 	private Path pathFor(Attachment attachment) {
@@ -122,10 +109,7 @@ public class CsvRecordWriter {
 		return columns;
 	}
 
-	private record Column(String header, String field) {
-	}
-
-	private void ensureHeader(Path path, List<Column> columns) {
+	private void ensureHeader(Path path, RecordFormatter formatter, List<Column> columns) {
 		if (headerWritten.containsKey(path)) {
 			return;
 		}
@@ -133,12 +117,11 @@ public class CsvRecordWriter {
 			if (path.getParent() != null) {
 				Files.createDirectories(path.getParent());
 			}
+			// Only if the format has one: JSON Lines and XML fragments are both
+			// corrupted by a leading line that is not a record.
 			if (!Files.exists(path)) {
-				List<String> header = new ArrayList<>();
-				header.add("record_id");
-				columns.forEach(column -> header.add(column.header()));
-				header.add("created_at");
-				Files.writeString(path, String.join(",", header) + System.lineSeparator());
+				formatter.header(columns).ifPresent(header ->
+						write(path, header + System.lineSeparator()));
 			}
 			headerWritten.put(path, true);
 		} catch (IOException e) {
@@ -154,15 +137,4 @@ public class CsvRecordWriter {
 		}
 	}
 
-	/**
-	 * RFC4180 quoting. Free-text fields could contain a comma or a quote, and a
-	 * college name like "University of X, Y Campus" would otherwise silently
-	 * corrupt the column count of every row it appeared in.
-	 */
-	private String csvField(String value) {
-		if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-			return "\"" + value.replace("\"", "\"\"") + "\"";
-		}
-		return value;
-	}
 }

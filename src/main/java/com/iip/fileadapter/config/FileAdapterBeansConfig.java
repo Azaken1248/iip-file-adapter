@@ -1,7 +1,8 @@
 package com.iip.fileadapter.config;
 
 import com.iip.fileadapter.csv.CsvInternReader;
-import com.iip.fileadapter.csv.CsvRecordWriter;
+import com.iip.fileadapter.csv.FileRecordWriter;
+import com.iip.fileadapter.format.RecordFormatters;
 import com.iip.fileadapter.dedup.DedupStores;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +19,10 @@ public class FileAdapterBeansConfig {
 	 * existing single-contract install keeps writing where it always did.
 	 */
 	@Bean
-	public CsvRecordWriter csvRecordWriter(@Value("${iip.file.output-path}") String outputPath) {
-		return new CsvRecordWriter(Path.of(outputPath));
+	public FileRecordWriter fileRecordWriter(
+			@Value("${iip.file.output-path}") String outputPath,
+			RecordFormatters formatters) {
+		return new FileRecordWriter(Path.of(outputPath), formatters);
 	}
 
 	@Bean

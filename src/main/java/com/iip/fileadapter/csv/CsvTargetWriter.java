@@ -19,9 +19,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class CsvTargetWriter implements TargetWriter {
 
-	private final CsvRecordWriter csvRecordWriter;
+	private final FileRecordWriter csvRecordWriter;
 
-	public CsvTargetWriter(CsvRecordWriter csvRecordWriter) {
+	public CsvTargetWriter(FileRecordWriter csvRecordWriter) {
 		this.csvRecordWriter = csvRecordWriter;
 	}
 

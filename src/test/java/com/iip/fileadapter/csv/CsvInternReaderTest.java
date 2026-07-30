@@ -5,6 +5,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iip.fileadapter.attachment.Attachment;
+import com.iip.fileadapter.format.CsvFormatter;
+import com.iip.fileadapter.format.RecordFormatters;
 import com.iip.fileadapter.pipeline.RecordEnvelope;
 
 import java.nio.file.Path;
@@ -50,7 +52,7 @@ class CsvInternReaderTest {
 				Map.of("header", "status", "field", "status"));
 
 		try {
-			new CsvRecordWriter(csvPath).append(
+			new FileRecordWriter(csvPath, new RecordFormatters(List.of(new CsvFormatter()))).append(
 					new RecordEnvelope(new ObjectMapper().readTree(json)),
 					new Attachment("test", "interns", Map.of("columns", columns)));
 		} catch (Exception e) {

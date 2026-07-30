@@ -3,6 +3,10 @@ package com.iip.fileadapter.csv;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iip.fileadapter.attachment.Attachment;
 import com.iip.fileadapter.attachment.AttachmentConfigurationException;
+import com.iip.fileadapter.format.CsvFormatter;
+import com.iip.fileadapter.format.JsonFormatter;
+import com.iip.fileadapter.format.RecordFormatters;
+import com.iip.fileadapter.format.XmlFormatter;
 import com.iip.fileadapter.pipeline.RecordEnvelope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,12 +35,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * compiled in, which is the only reason those cases can now be stated for a
  * contract this repository has never heard of.
  */
-class CsvRecordWriterTest {
+class FileRecordWriterTest {
 
 	@TempDir
 	Path tempDir;
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
+
+	private static RecordFormatters formatters() {
+		return new RecordFormatters(List.of(new CsvFormatter(), new JsonFormatter(MAPPER), new XmlFormatter()));
+	}
 
 	private static Attachment attachment(String contractId, String path, List<Map<String, String>> columns) {
 		Map<String, Object> config = new LinkedHashMap<>();
@@ -95,7 +103,7 @@ class CsvRecordWriterTest {
 	void twoContractsOnOneInstanceWriteTwoFilesWithTwoColumnSets() throws IOException {
 		Path internsFile = tempDir.resolve("interns.csv");
 		Path ordersFile = tempDir.resolve("orders.csv");
-		CsvRecordWriter writer = new CsvRecordWriter(tempDir.resolve("default.csv"));
+		FileRecordWriter writer = new FileRecordWriter(tempDir.resolve("default.csv"), formatters());
 
 		List<Map<String, String>> orderColumns = List.of(
 				Map.of("header", "order_number", "field", "orderNumber"),
@@ -130,7 +138,7 @@ class CsvRecordWriterTest {
 	@Test
 	void theHeaderIsTheDeclaredColumnsBetweenTheTwoEnvelopeOnes() throws IOException {
 		Path file = tempDir.resolve("out.csv");
-		new CsvRecordWriter(tempDir.resolve("default.csv")).append(
+		new FileRecordWriter(tempDir.resolve("default.csv"), formatters()).append(
 				envelope("interns", "{\"internId\": \"INT-1\"}"),
 				attachment("interns", file.toString(), internColumns()));
 
@@ -146,7 +154,7 @@ class CsvRecordWriterTest {
 	@Test
 	void aFieldContainingACommaIsQuoted() throws IOException {
 		Path file = tempDir.resolve("out.csv");
-		new CsvRecordWriter(tempDir.resolve("default.csv")).append(
+		new FileRecordWriter(tempDir.resolve("default.csv"), formatters()).append(
 				envelope("interns", "{\"internId\": \"INT-1\", \"college\": \"University of X, Y Campus\"}"),
 				attachment("interns", file.toString(), internColumns()));
 
@@ -158,7 +166,7 @@ class CsvRecordWriterTest {
 	@Test
 	void aFieldTheRecordOmitsIsWrittenEmptyRatherThanAsTheWordNull() throws IOException {
 		Path file = tempDir.resolve("out.csv");
-		new CsvRecordWriter(tempDir.resolve("default.csv")).append(
+		new FileRecordWriter(tempDir.resolve("default.csv"), formatters()).append(
 				envelope("interns", "{\"internId\": \"INT-1\"}"),
 				attachment("interns", file.toString(), internColumns()));
 
@@ -177,9 +185,9 @@ class CsvRecordWriterTest {
 		// Two writers over one file, which is what a restart looks like: the
 		// in-process "have I written a header" flag is gone, and only the file
 		// itself can answer.
-		new CsvRecordWriter(tempDir.resolve("default.csv"))
+		new FileRecordWriter(tempDir.resolve("default.csv"), formatters())
 				.append(envelope("interns", "{\"internId\": \"INT-1\"}"), attachment);
-		new CsvRecordWriter(tempDir.resolve("default.csv"))
+		new FileRecordWriter(tempDir.resolve("default.csv"), formatters())
 				.append(envelope("interns", "{\"internId\": \"INT-2\"}"), attachment);
 
 		List<String> lines = Files.readAllLines(file);
@@ -188,12 +196,41 @@ class CsvRecordWriterTest {
 				"a restart wrote a second header into the middle of the file");
 	}
 
+	/**
+	 * Phase 6.4: two contracts on one instance, in two formats. The same
+	 * property as two files with two column sets, one step further down.
+	 */
+	@Test
+	void twoContractsOnOneInstanceCanBeWrittenInTwoFormats() throws IOException {
+		Path csvFile = tempDir.resolve("interns.csv");
+		Path jsonFile = tempDir.resolve("orders.jsonl");
+		FileRecordWriter writer = new FileRecordWriter(tempDir.resolve("default.csv"), formatters());
+
+		Map<String, Object> jsonConfig = new LinkedHashMap<>();
+		jsonConfig.put("path", jsonFile.toString());
+		jsonConfig.put("format", "json");
+		jsonConfig.put("columns", List.of(Map.of("header", "order_number", "field", "orderNumber")));
+
+		writer.append(envelope("interns", "{\"internId\": \"INT-1\"}"),
+				attachment("interns", csvFile.toString(), internColumns()));
+		writer.append(envelope("purchase-orders", "{\"orderNumber\": \"PO-9\"}"),
+				new Attachment(UUID.randomUUID().toString(), "purchase-orders", jsonConfig));
+
+		assertTrue(Files.readAllLines(csvFile).get(0).startsWith("record_id,"),
+				"the csv file should still have its header");
+		// And the json file has no header line at all -- one would not be valid
+		// JSON, and every reader would fail on it.
+		List<String> jsonLines = Files.readAllLines(jsonFile);
+		assertEquals(1, jsonLines.size());
+		assertTrue(jsonLines.get(0).startsWith("{"), jsonLines.get(0));
+	}
+
 	@Test
 	void anAttachmentWithNoColumnsIsRefusedRatherThanWritingEnvelopesOnly() {
 		// Silently writing record_id and created_at and nothing else would
 		// produce a file that looks like it works and contains no data.
 		assertThrows(AttachmentConfigurationException.class, () ->
-				new CsvRecordWriter(tempDir.resolve("default.csv")).append(
+				new FileRecordWriter(tempDir.resolve("default.csv"), formatters()).append(
 						envelope("interns", "{\"internId\": \"INT-1\"}"),
 						new Attachment("a", "interns", Map.of())));
 	}
@@ -203,7 +240,7 @@ class CsvRecordWriterTest {
 		// What keeps an existing single-contract install writing where it
 		// always did, without anyone having to add a path to its attachment.
 		Path fallback = tempDir.resolve("default.csv");
-		new CsvRecordWriter(fallback).append(
+		new FileRecordWriter(fallback, formatters()).append(
 				envelope("interns", "{\"internId\": \"INT-1\"}"),
 				new Attachment("a", "interns", Map.of("columns", internColumns())));
 
