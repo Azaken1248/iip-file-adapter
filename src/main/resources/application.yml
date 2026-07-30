@@ -57,7 +57,12 @@ iip:
     # its own configuration, so an unreachable registry costs it a line in a
     # dropdown and nothing else.
     registry-url: ${CONTRACT_REGISTRY_URL:http://localhost:8083}
-    refresh-interval-ms: ${CATALOG_REFRESH_INTERVAL_MS:30000}
+    # Five minutes, not the 30s the attachment refresh uses. Re-announcing
+    # exists so the catalog heals after the registry is restarted or restored
+    # from a backup, which is a minutes-scale concern -- and every pass is an
+    # upsert, so a shorter interval would write to the registry's database
+    # forever to keep a row that has not changed.
+    refresh-interval-ms: ${CATALOG_REFRESH_INTERVAL_MS:300000}
   file:
     output-path: ${FILE_OUTPUT_PATH:./data/interns.csv}
     dedup-store-path: ${DEDUP_STORE_PATH:./data/file-adapter-dedup}
