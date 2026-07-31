@@ -53,4 +53,32 @@ public final class EnvelopeJsonFixture {
 				}
 				""".formatted(recordId, internId, internId, firstName, lastName, email, college, department, mentor);
 	}
+	/**
+	 * An envelope for <em>any</em> contract, with the payload supplied as raw
+	 * JSON (Phase 6.10).
+	 *
+	 * <p>The payload is a string rather than a typed object because the whole
+	 * point of the contracts it is used for is that this repository has no Java
+	 * type for them -- building one from a record would quietly reintroduce the
+	 * type it exists to prove unnecessary.
+	 */
+	public static String envelopeJson(
+			String recordId,
+			String contractId,
+			String recordType,
+			String naturalKey,
+			String payloadJson) {
+		return """
+				{
+				  "recordId": "%s",
+				  "contractId": "%s",
+				  "recordType": "%s",
+				  "schemaVersion": 1,
+				  "naturalKey": "%s",
+				  "occurredAt": "2026-07-21T14:10:00Z",
+				  "traceId": null,
+				  "payload": %s
+				}
+				""".formatted(recordId, contractId, recordType, naturalKey, payloadJson);
+	}
 }
